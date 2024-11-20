@@ -3,6 +3,7 @@ import re
 import requests
 import ast
 from typing import List
+import json
 
 
 def convert(text):
@@ -63,30 +64,32 @@ def fetch_movie_details(movie_id):
 
 
 # Main function to recommend top 5 movies for each genre
-    
+
 def recommend_top_5(genre_list: List[str]):
+    
+    # Load the dataset
     df = pd.read_csv('./tmdb_5000_movies.csv')
-    df['genres'] = df['genres'].apply(convert)  # Ensure genres are lists
+
+    # Convert genres column into a list of genre names
+    df['genres'] = df['genres'].apply(convert)  
+
+    # Select relevant columns
     movies = df[['id', 'title', 'overview', 'genres', 'keywords', 'vote_average']]
-    
-    top_movies = []
 
+    # Dictionary to store top 5 movies for each genre
+    top_movies = {}
+
+    # Get top 5 movies for each genre
     for genre in genre_list:
-        genre_movies = movies[movies['genres'].apply(lambda x: genre in x)]
-        if genre_movies.empty:
-            continue  # Skip genres with no movies
-    
-    genre_movies = genre_movies.sort_values(by='vote_average', ascending=False)
-    genre_movies = genre_movies.head(5)
+        genre_movies = movies[movies['genres'].apply(lambda x: genre in x)]  # Filter by genre
+        genre_movies = genre_movies.sort_values(by='vote_average', ascending=False)  # Sort by ratings
+        top_movies[genre] = genre_movies.head(5).to_dict(orient='records')  # Convert to JSON-like dict
 
-    for _, row in genre_movies.iterrows():
-        details = fetch_movie_details(row['id'])
-        if 'error' not in details:
-            top_movies.append(details)
+    # Optionally, pretty print the results for debugging
+    print(json.dumps(top_movies, indent=4))
 
+    # Return the top_movies dictionary for use in API responses
     return top_movies
-
-
 
 
     
