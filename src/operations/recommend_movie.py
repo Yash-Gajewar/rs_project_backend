@@ -1,12 +1,10 @@
 import pandas as pd
 import re
-import requests
 import ast
-from typing import List
+from typing import List, Dict
 import json
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-
 
 
 def convert(text):
@@ -68,8 +66,10 @@ def fetch_movie_id(movie_name):
 
 # Main function to recommend top 5 movies for each genre
 
+from typing import List
+import pandas as pd
+
 def recommend_top_5(genre_list: List[str]):
-    
     # Load the dataset
     df = pd.read_csv('./tmdb_5000_movies.csv')
 
@@ -79,19 +79,17 @@ def recommend_top_5(genre_list: List[str]):
     # Select relevant columns
     movies = df[['id', 'title', 'overview', 'genres', 'keywords', 'vote_average']]
 
-    # Dictionary to store top 5 movies for each genre
-    top_movies = {}
+    # List to store top movies
+    top_movies = []
 
     # Get top 5 movies for each genre
     for genre in genre_list:
         genre_movies = movies[movies['genres'].apply(lambda x: genre in x)]  # Filter by genre
         genre_movies = genre_movies.sort_values(by='vote_average', ascending=False)  # Sort by ratings
-        top_movies[genre] = genre_movies.head(5).to_dict(orient='records')  # Convert to JSON-like dict
+        top_movies.extend(genre_movies.head(5).to_dict(orient='records'))  # Add to the list
 
-    # Optionally, pretty print the results for debugging
-    print(json.dumps(top_movies, indent=4))
+    # Return a flat list of top movies
 
-    # Return the top_movies dictionary for use in API responses
     return top_movies
 
 
@@ -121,23 +119,44 @@ def collapse(L):
 
 
 
+# fetch movie details like id, original_title, overview, tagline, poster_path from ./tmdb5000_movies.csv from movie title
 
-def fetch_movie_details(movie_id):
+def fetch_movie_details(movie_title):
+    """
+    Fetches movie details from the CSV file based on the movie title.
+
+    Args:
+        file_path (str): Path to the tmdb5000_movies.csv file.
+        movie_title (str): Title of the movie to search for.
+
+    Returns:
+        dict: A dictionary containing movie details or a message if the movie is not found.
+    """
     try:
-        df = pd.read_csv('./tmdb_5000_movies.csv')
-        df.dropna(subset=['genres', 'keywords', 'cast', 'crew'], inplace=True)
-        movie = df[df['id'] == movie_id]
+        # Load the CSV file
+        movies_df = pd.read_csv('./tmdb_5000_movies.csv')
+        
+        # Perform a case-insensitive search for the movie title
+        movie = movies_df[movies_df['title'].str.lower() == movie_title.lower()]
+        
         if movie.empty:
-            return {"error": f"Failed to fetch details for movie ID {movie_id}"}
-        movie = movie.iloc[0]
-        return {
-            'title': movie.get('original_title', 'No title available'),
-            'overview': movie.get('overview', 'No overview available') or 'No overview available',
-            'tagline': movie.get('tagline', '') or ''
+            return {"error": "Movie not found."}
+        
+        # Extract relevant details
+        movie = movie.iloc[0]  # First match
+        details = {
+            "id": int(movie['id']),  # Ensure proper type conversion
+            "original_title": str(movie['original_title']),
+            "overview": str(movie['overview']),
+            "tagline": str(movie['tagline']) if pd.notna(movie['tagline']) else None,
+            "poster_path": None  # Not present in the dataset
         }
-
+        return details
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"An error occurred: {str(e)}"}
+
+
+    
 
 
 def content_based_recommendation(movie_name : str):
@@ -188,7 +207,67 @@ def content_based_recommendation(movie_name : str):
     for i in distances[1:11]:
         recommended_movies.append(new.iloc[i[0]].title)
 
-    return recommended_movies
+    result = []
+
+    for i in recommended_movies:
+        result.append(fetch_movie_details(i))
+
+    return result
+
+
+
+import pandas as pd
+from typing import List, Dict
+
+def get_similar(movie: str, rating: float, corrMatrix: pd.DataFrame) -> pd.Series:
+    """
+    Calculate similarity scores for a given movie.
+    """
+    if movie in corrMatrix:
+        similar_scores = corrMatrix[movie] * (rating - 2.5)  # Weight by how much user liked the movie
+        return similar_scores
+    return pd.Series()  # Return empty series if the movie is not in the correlation matrix
+
+
+
+def collaborative_filter(user: List[Dict[str, float]]) -> List[str]:
+    """
+    Recommend top movies for a user based on their ratings.
+    :param user: List of movies with their ratings [{'movie': 'Movie A', 'rating': 4}, ...]
+    :return: List of top 10 recommended movies
+    """
+    # Load data
+    ratings = pd.read_csv('./ratings.csv')
+    movies = pd.read_csv('./movies.csv')
+    
+    # Merge and preprocess data
+    ratings = pd.merge(movies, ratings).drop(['genres', 'timestamp'], axis=1)
+    userRatings = ratings.pivot_table(index=['userId'], columns=['title'], values='rating')
+    userRatings = userRatings.dropna(thresh=10, axis=1).fillna(0, axis=1)
+    corrMatrix = userRatings.corr(method='pearson')
+
+    # Generate recommendations
+    similar_movies = pd.DataFrame()
+    for entry in user:
+        movie = entry['movie']
+        rating = entry['rating']
+        similar = get_similar(movie, rating, corrMatrix).to_frame().T
+        similar_movies = pd.concat([similar_movies, similar], ignore_index=True)
+
+    # Aggregate and sort recommendations
+    recommended = similar_movies.sum().sort_values(ascending=False).head(10)
+
+    recommended_list = recommended.index.tolist()  # Return the top 10 movie titles
+
+    result = []
+
+    for movie in recommended_list:
+        temp_title = fix_movie_title(movie)
+        details = fetch_movie_details(temp_title)
+        result.append(details)
+
+
+    return result
 
 
 

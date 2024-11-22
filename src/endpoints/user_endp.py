@@ -1,5 +1,5 @@
 from fastapi import HTTPException, APIRouter
-from src.models.user_model import User
+from src.models.user_model import User, MovieRatings
 # from pymongo import ASCENDING
 
 
@@ -7,6 +7,8 @@ from src.establish_db_connection import database
 
 
 collection = database.Users
+
+ratings = database.Ratings
 
 # collection.create_index([("email", ASCENDING)], unique=True)
 
@@ -36,7 +38,32 @@ async def get_user(email :str, password:str):
         return True
     else:
         return False
+    
 
+@router.post("/ratings")
+async def add_rating(email:str, movie_ratings: MovieRatings):
+    # Find the user by email
+    result = collection.find_one({"email": email})
+
+    if result:
+        result["_id"] = str(result["_id"])
+
+        # Initialize ratings field if it doesn't exist
+        if "ratings" not in result:
+            result["ratings"] = {}
+
+        # Update the ratings with the new data
+        for movie, rating in movie_ratings.rating.items():
+            result["ratings"][movie] = rating
+
+        # Save the updated user data back to the database
+        collection.update_one({"email": email}, {"$set": {"ratings": result["ratings"]}})
+
+        return {"message": "Rating added successfully", "user": result}
+
+    # If user is not found
+    raise HTTPException(status_code=404, detail="User not found")
+    
 
 
        
