@@ -9,7 +9,6 @@ class User(BaseModel):
     username: str = Field(...)
     password: str = Field(...)
     email: str = Field(...)
-    genre : List[str] = Field(...)
 
 
 
@@ -22,5 +21,11 @@ class UserRating(BaseModel):
     movie: str = Field(..., description="The title of the movie.")
     rating: float = Field(..., description="The rating given to the movie.")
 
+
+
 class UserRatingsRequest(BaseModel):
     ratings: List[UserRating] = Field(..., description="List of movies with ratings.")
+
+
+class Genre(BaseModel):
+    genre: List[str] = Field(..., description="List of genres.")
