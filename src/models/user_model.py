@@ -19,7 +19,7 @@ class MovieRatings(BaseModel):
 
 class UserRating(BaseModel):
     movie: str = Field(..., description="The title of the movie.")
-    rating: float = Field(..., description="The rating given to the movie.")
+    rating: str = Field(..., description="The rating given to the movie.")
 
 
 
