@@ -69,7 +69,7 @@ def fetch_movie_id(movie_name):
 from typing import List
 import pandas as pd
 
-def recommend_top_5(genre_list: List[str]):
+def recommend_top_5(genre: str):
     # Load the dataset
     df = pd.read_csv('./tmdb_5000_movies.csv')
 
@@ -78,6 +78,8 @@ def recommend_top_5(genre_list: List[str]):
 
     # Select relevant columns
     movies = df[['id', 'title', 'overview', 'genres', 'keywords', 'vote_average']]
+
+    genre_list = genre.split(',')  # Convert to list
 
     # List to store top movies
     top_movies = []

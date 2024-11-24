@@ -16,8 +16,8 @@ router = APIRouter(
 
 
 @router.post("/top_5")
-async def get_top_5(genre_list: List[str]):
-    return recommend_top_5(genre_list)
+async def get_top_5(genre: str):
+    return recommend_top_5(genre)
 
 
 @router.get("/content_based")
