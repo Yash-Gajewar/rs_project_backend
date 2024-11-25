@@ -63,9 +63,14 @@ async def add_genre(email: str, genre: Genre):
     raise HTTPException(status_code=404, detail="User not found")
 
 
-       
 @router.post("/post_ratings")
-async def post_ratings(email: str, ratings: list[str]):
+async def post_ratings(email: str, ratings: List[str]):
+    # Ensure the ratings list has exactly two elements
+    if len(ratings) != 2:
+        return {"error": "Invalid ratings format. Provide [movie, rating]."}
+
+    movie_name, rating = ratings[0], ratings[1]
+
     # Find the user by email
     result = collection.find_one({"email": email})
 
@@ -73,17 +78,19 @@ async def post_ratings(email: str, ratings: list[str]):
         result["_id"] = str(result["_id"])
 
         # Initialize or update the ratings field
-
         if "ratings" not in result:
-            result["ratings"] = []
+            result["ratings"] = {}
 
-        result["ratings"].update({ratings[0]: ratings[1]})
+        # Update the ratings dictionary
+        result["ratings"][movie_name] = rating
 
         # Save the updated user data back to the database
-
         collection.update_one({"email": email}, {"$set": {"ratings": result["ratings"]}})
 
         return {"message": "Ratings added successfully", "user": result}
+    else:
+        return {"error": "User not found"}
+
         
 
 
