@@ -1,11 +1,9 @@
 from fastapi import APIRouter
 # from src.operations.recommend_movie import recommend_movie, fetch_movie_id, fetch_movie_details
 
-from src.operations.recommend_movie import recommend_top_5, content_based_recommendation, collaborative_filter
+from src.operations.recommend_movie import recommend_top_5, content_based_recommendation, collaborative_filter 
 
 from typing import List, Dict
-
-from src.models.user_model import UserRatingsRequest
 
 
 router = APIRouter(
@@ -26,17 +24,13 @@ async def get_content_based(movie_name: str):
 
 
 
-@router.post("/collaborative_based")
-async def recommend_movies(user_ratings_request: UserRatingsRequest):
-    # Extract the list of movies and ratings
-    user_ratings = [
-        {"movie": rating.movie, "rating": rating.rating}
-        for rating in user_ratings_request.ratings
-    ]
-
+@router.get("/collaborative_based")
+async def recommend_movies(email : str):
     # Call your collaborative_filter function with the correct format
-    recommendations = collaborative_filter(user_ratings)
-    return {"recommendations": recommendations}
+    recommendations = await collaborative_filter(email)
+    # return {"recommendations": recommendations}
+
+    return recommendations
 
 
 

@@ -6,6 +6,13 @@ import json
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from src.endpoints.user_endp import get_ratings
+
+
+from src.establish_db_connection import database
+
+collection = database.Users
+
 
 def convert(text):
     L = []
@@ -218,9 +225,6 @@ def content_based_recommendation(movie_name : str):
 
 
 
-import pandas as pd
-from typing import List, Dict
-
 def get_similar(movie: str, rating: float, corrMatrix: pd.DataFrame) -> pd.Series:
     """
     Calculate similarity scores for a given movie.
@@ -232,44 +236,51 @@ def get_similar(movie: str, rating: float, corrMatrix: pd.DataFrame) -> pd.Serie
 
 
 
-def collaborative_filter(user: List[Dict[str, float]]) -> List[str]:
-    """
-    Recommend top movies for a user based on their ratings.
-    :param user: List of movies with their ratings [{'movie': 'Movie A', 'rating': 4}, ...]
-    :return: List of top 10 recommended movies
-    """
-    # Load data
-    ratings = pd.read_csv('./ratings.csv')
-    movies = pd.read_csv('./movies.csv')
-    
-    # Merge and preprocess data
-    ratings = pd.merge(movies, ratings).drop(['genres', 'timestamp'], axis=1)
-    userRatings = ratings.pivot_table(index=['userId'], columns=['title'], values='rating')
-    userRatings = userRatings.dropna(thresh=10, axis=1).fillna(0, axis=1)
-    corrMatrix = userRatings.corr(method='pearson')
 
-    # Generate recommendations
-    similar_movies = pd.DataFrame()
-    for entry in user:
-        movie = entry['movie']
-        rating = entry['rating']
-        similar = get_similar(movie, rating, corrMatrix).to_frame().T
-        similar_movies = pd.concat([similar_movies, similar], ignore_index=True)
+async def collaborative_filter(email: str):
+    result = collection.find_one({"email": email})
+    if result is not None:
+        # return result["ratings"]
 
-    # Aggregate and sort recommendations
-    recommended = similar_movies.sum().sort_values(ascending=False).head(10)
+        user = []
 
-    recommended_list = recommended.index.tolist()  # Return the top 10 movie titles
+        for key, value in  result["ratings"].items():
+            user.append({"movie": key, "rating": float(value)})
 
-    result = []
+        ratings = pd.read_csv('./ratings.csv')
+        movies = pd.read_csv('./movies.csv')
+        
+        # Merge and preprocess data
+        ratings = pd.merge(movies, ratings).drop(['genres', 'timestamp'], axis=1)
+        userRatings = ratings.pivot_table(index=['userId'], columns=['title'], values='rating')
+        userRatings = userRatings.dropna(thresh=10, axis=1).fillna(0, axis=1)
+        corrMatrix = userRatings.corr(method='pearson')
 
-    for movie in recommended_list:
-        temp_title = fix_movie_title(movie)
-        details = fetch_movie_details(temp_title)
-        result.append(details)
+        # Generate recommendations
+        similar_movies = pd.DataFrame()
+        for entry in user:
+            movie = entry['movie']
+            rating = entry['rating']
+            similar = get_similar(movie, rating, corrMatrix).to_frame().T
+            similar_movies = pd.concat([similar_movies, similar], ignore_index=True)
+
+        # Aggregate and sort recommendations
+        recommended = similar_movies.sum().sort_values(ascending=False).head(10)
+
+        recommended_list = recommended.index.tolist()  # Return the top 10 movie titles
+
+        result = []
+
+        for movie in recommended_list:
+            temp_title = fix_movie_title(movie)
+            details = fetch_movie_details(temp_title)
+            result.append(details)
 
 
-    return result
+        return result
+            
+    else:
+        return {"error": "User not found"}
 
 
 
