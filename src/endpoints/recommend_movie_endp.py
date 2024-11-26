@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 # from src.operations.recommend_movie import recommend_movie, fetch_movie_id, fetch_movie_details
 
-from src.operations.recommend_movie import recommend_top_5, content_based_recommendation, collaborative_filter 
+from src.operations.recommend_movie import recommend_top_5, content_based_recommendation, collaborative_filter, fetch_movie_details
 
 from typing import List, Dict
 
@@ -25,12 +25,20 @@ async def get_content_based(movie_name: str):
 
 
 @router.get("/collaborative_based")
-async def recommend_movies(email : str):
+async def get_collaborative_filter(username : str):
     # Call your collaborative_filter function with the correct format
-    recommendations = await collaborative_filter(email)
+    recommendations = await collaborative_filter(username)
     # return {"recommendations": recommendations}
 
     return recommendations
+
+
+
+@router.get("/get_movie_details")
+async def get_movie_details(movie_name: str):
+    return fetch_movie_details(movie_name)
+
+
 
 
 

@@ -32,12 +32,13 @@ async def post_user(user: User):
     
 
 @router.get("/userexists")
-async def get_user(email :str, password:str):
-    result = collection.find_one({"email": email, "password": password})
+async def check_user_exists(username :str, password:str):
+    result = collection.find_one({"username": username, "password": password})
     if result is not None:
         return True
     else:
         return False
+    
     
 
 @router.post("/genre")
@@ -64,7 +65,7 @@ async def add_genre(email: str, genre: Genre):
 
 
 @router.post("/post_ratings")
-async def post_ratings(email: str, ratings: List[str]):
+async def post_ratings(username: str, ratings: List[str]):
     # Ensure the ratings list has exactly two elements
     if len(ratings) != 2:
         return {"error": "Invalid ratings format. Provide [movie, rating]."}
@@ -72,7 +73,7 @@ async def post_ratings(email: str, ratings: List[str]):
     movie_name, rating = ratings[0], ratings[1]
 
     # Find the user by email
-    result = collection.find_one({"email": email})
+    result = collection.find_one({"username": username})
 
     if result:
         result["_id"] = str(result["_id"])
@@ -85,7 +86,7 @@ async def post_ratings(email: str, ratings: List[str]):
         result["ratings"][movie_name] = rating
 
         # Save the updated user data back to the database
-        collection.update_one({"email": email}, {"$set": {"ratings": result["ratings"]}})
+        collection.update_one({"username": username}, {"$set": {"ratings": result["ratings"]}})
 
         return {"message": "Ratings added successfully", "user": result}
     else:
@@ -96,8 +97,8 @@ async def post_ratings(email: str, ratings: List[str]):
 
 
 @router.get("/get_ratings")
-async def get_ratings(email: str):
-    result = collection.find_one({"email": email})
+async def get_ratings(username: str):
+    result = collection.find_one({"username": username})
     if result is not None:
         return result["ratings"]
     else:

@@ -237,8 +237,8 @@ def get_similar(movie: str, rating: float, corrMatrix: pd.DataFrame) -> pd.Serie
 
 
 
-async def collaborative_filter(email: str):
-    result = collection.find_one({"email": email})
+async def collaborative_filter(username: str):
+    result = collection.find_one({"username": username})
     if result is not None:
         # return result["ratings"]
 
