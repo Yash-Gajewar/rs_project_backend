@@ -155,7 +155,7 @@ def fetch_movie_details(movie_title):
         movie = movie.iloc[0]  # First match
         details = {
             "id": int(movie['id']),  # Ensure proper type conversion
-            "original_title": str(movie['original_title']),
+            "name": str(movie['original_title']),
             "overview": str(movie['overview']),
             "tagline": str(movie['tagline']) if pd.notna(movie['tagline']) else None,
             "poster_path": None  # Not present in the dataset
